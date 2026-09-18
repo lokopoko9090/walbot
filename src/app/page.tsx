@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import NeuralSynapseTree, { NeuralBranch } from "./components/NeuralSynapseTree";
 
 interface Persona {
   id: string;
@@ -89,6 +90,7 @@ interface Message {
   hasMemory?: boolean;
   recalledCount?: number;
   recalledSnippets?: string[];
+  branches?: NeuralBranch[];
   timestamp: string;
 }
 
@@ -224,6 +226,7 @@ export default function HomePage() {
           hasMemory: data.hasMemory,
           recalledCount: data.recalledCount,
           recalledSnippets: data.recalledSnippets,
+          branches: data.branches,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -239,6 +242,42 @@ export default function HomePage() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleSelectBranch(branch: NeuralBranch) {
+    handleSend(`Розкрий детально наступний вектор: "${branch.label}". Як реалізувати цей сценарій і куди це приведе на практиці?`);
+  }
+
+  async function handlePruneBranch(branch: NeuralBranch) {
+    const newConstraint = `Заборонено вектор: "${branch.label}". Користувач відсік цей сценарій і заборонив його розгляд.`;
+    if (!activeRules.includes(newConstraint)) {
+      const updated = [...activeRules, newConstraint];
+      setActiveRules(updated);
+      localStorage.setItem("walbot_rules_" + selectedPersona.id, JSON.stringify(updated));
+
+      // Visual confirmation in terminal
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "prune-" + Date.now(),
+          role: "bot",
+          text: `✂️ **СИНАПС ВІДСІЧЕНО:** Вектор *«${branch.label}»* заблоковано.\n\nЗаборону записано в пам'ять Walrus. WalBot більше не пропонуватиме цей сценарій.`,
+          hasMemory: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+
+      // Fire background persistence to Walrus API
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `[PRUNED_BRANCH_RULE]: ${newConstraint}`,
+          userId: currentUserId,
+          activeRules: updated,
+        }),
+      }).catch(() => {});
     }
   }
 
@@ -440,6 +479,15 @@ export default function HomePage() {
                       : "bg-[#0a0a0a] border border-[#1a1a1a] text-gray-300 rounded-tl-none shadow-sm"
                   }`}>
                     <div dangerouslySetInnerHTML={{ __html: renderFormatted(msg.text) }} />
+
+                    {/* Neural Synapse Tree with branching vectors & pruning */}
+                    {isBot && msg.branches && msg.branches.length > 0 && (
+                      <NeuralSynapseTree
+                        branches={msg.branches}
+                        onSelectBranch={handleSelectBranch}
+                        onPruneBranch={handlePruneBranch}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

@@ -124,6 +124,32 @@ ${memorySummary
   : "New session context."
 }
 
+NEURAL DECISION TREE FORKS:
+At the very end of your answer, ALWAYS output exactly 2 or 3 future decision vectors / branches based on the topic discussed, formatted inside a code block named \`\`\`neural_branches ... \`\`\`.
+Each item in the JSON array must have:
+- "id": a unique short ID (e.g. "b1", "b2")
+- "label": short, punchy title of the direction / vector (e.g., "Повна децентралізація через TEE", "Гібридний кеш на Edge")
+- "trajectory": realistic forecast of "Куди це приведе" (architecture, benefits, or trade-offs)
+- "implication": key risk, cost, or technical consequence
+
+Example at the end of output:
+\`\`\`neural_branches
+[
+  {
+    "id": "b1",
+    "label": "Чистий Web3 без бекенду",
+    "trajectory": "Приведе до нульових витрат на сервери, але вимагає зберігання сесій у Walrus.",
+    "implication": "Вища чутливість до швидкості блокчейн-мережі"
+  },
+  {
+    "id": "b2",
+    "label": "Гібридна Web2.5 архітектура",
+    "trajectory": "Приведе до миттєвого відгуку через локальний кеш і періодичної фіксації у Walrus.",
+    "implication": "Потребує синхронізації станів"
+  }
+]
+\`\`\`
+
 Keep responses concise, informative, and well-structured. Use markdown formatting.`;
 
     // 4. Get Gemini response with model fallbacks (prioritizing fast and high-quota models)
@@ -160,12 +186,25 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
       throw lastError || new Error("Failed to generate response from all models");
     }
 
-    console.log(`[CHAT OUTGOING] Bot reply: "${response.substring(0, 150)}..."`);
+    // 5. Extract Neural Decision Branches if present
+    let cleanReply = response;
+    let neuralBranches: Array<{ id: string; label: string; trajectory: string; implication: string }> = [];
+    const branchesMatch = response.match(/```neural_branches\s*([\s\S]*?)\s*```/);
+    if (branchesMatch && branchesMatch[1]) {
+      try {
+        neuralBranches = JSON.parse(branchesMatch[1]);
+        cleanReply = response.replace(/```neural_branches[\s\S]*?```/, "").trim();
+      } catch (e) {
+        console.warn("Failed to parse neural branches:", e);
+      }
+    }
 
-    // 5. Asynchronously persist to Walrus
+    console.log(`[CHAT OUTGOING] Bot reply: "${cleanReply.substring(0, 150)}..." [Branches: ${neuralBranches.length}]`);
+
+    // 6. Asynchronously persist to Walrus
     // Save Q&A interaction
     memwal
-      .remember(`[${userId}] Q: "${message.substring(0, 150)}" | A summary: "${response.substring(0, 200)}"`)
+      .remember(`[${userId}] Q: "${message.substring(0, 150)}" | A summary: "${cleanReply.substring(0, 200)}"`)
       .catch((e) => console.warn("Background remember error:", e?.message || e));
 
     // If a new rule was detected, explicitly write a rule memory blob to Walrus
@@ -177,7 +216,8 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
     }
 
     return NextResponse.json({
-      reply: response,
+      reply: cleanReply,
+      branches: neuralBranches,
       hasMemory: memorySummary.length > 0 || updatedRules.length > 0,
       recalledCount: recalledSnippets.length,
       recalledSnippets,
