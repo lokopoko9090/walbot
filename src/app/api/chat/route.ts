@@ -21,13 +21,25 @@ export async function POST(req: NextRequest) {
 
     // 1. Recall relevant memories for this user
     let memorySummary = "";
+    let recalledSnippets: string[] = [];
     try {
-      const recalled = await memwal.recall({ query: message });
-      const userMemories = recalled.results?.filter((r: { text: string }) =>
+      const recalled = await memwal.recall({ query: message, limit: 10, namespace: "walrus-tutor" });
+      let userMemories = recalled.results?.filter((r: { text: string }) =>
         r.text.includes(`[${userId}]`)
       ) ?? [];
 
+      // If specific query didn't find user memory, fallback to searching user profile
+      if (userMemories.length === 0 && userId.startsWith("user_")) {
+        try {
+          const fallback = await memwal.recall({ query: userId, limit: 10, namespace: "walrus-tutor" });
+          userMemories = fallback.results?.filter((r: { text: string }) =>
+            r.text.includes(`[${userId}]`)
+          ) ?? [];
+        } catch {}
+      }
+
       if (userMemories.length > 0) {
+        recalledSnippets = userMemories.slice(0, 3).map((m: { text: string }) => m.text);
         memorySummary = userMemories
           .slice(0, 5)
           .map((m: { text: string }) => `- ${m.text}`)
@@ -99,6 +111,8 @@ Keep responses concise (max 3-4 paragraphs). Use emoji sparingly to keep it frie
     return NextResponse.json({
       reply: response,
       hasMemory: memorySummary.length > 0,
+      recalledCount: recalledSnippets.length,
+      recalledSnippets,
     });
   } catch (error) {
     console.error("Chat error:", error);
