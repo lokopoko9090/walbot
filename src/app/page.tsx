@@ -101,6 +101,7 @@ export default function HomePage() {
   const [showProofs, setShowProofs] = useState(false);
   const [expandedSnippets, setExpandedSnippets] = useState<Record<string, boolean>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeRules, setActiveRules] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Initialize guest ID
@@ -112,6 +113,26 @@ export default function HomePage() {
     }
     setGuestId(savedGuest);
   }, []);
+
+  // Load and synchronize active rules for the selected persona
+  useEffect(() => {
+    const saved = localStorage.getItem("walbot_rules_" + selectedPersona.id);
+    if (saved) {
+      try {
+        setActiveRules(JSON.parse(saved));
+      } catch {
+        setActiveRules([]);
+      }
+    } else {
+      if (selectedPersona.id === "user_anna_frontend") {
+        const defaultRules = ["Заборонено згадувати, рекомендувати чи ставити будь-які запитання про Sui."];
+        setActiveRules(defaultRules);
+        localStorage.setItem("walbot_rules_" + selectedPersona.id, JSON.stringify(defaultRules));
+      } else {
+        setActiveRules([]);
+      }
+    }
+  }, [selectedPersona.id]);
 
   // Update initial welcome message on persona change and load history
   useEffect(() => {
@@ -183,10 +204,15 @@ export default function HomePage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: textToSend, userId: currentUserId }),
+        body: JSON.stringify({ message: textToSend, userId: currentUserId, activeRules }),
       });
 
       const data = await res.json();
+      if (data.activeRules) {
+        setActiveRules(data.activeRules);
+        localStorage.setItem("walbot_rules_" + selectedPersona.id, JSON.stringify(data.activeRules));
+      }
+
       const botMsgId = "bot-" + Date.now();
 
       setMessages((prev) => [
@@ -333,6 +359,35 @@ export default function HomePage() {
             /clear
           </button>
         </div>
+
+        {/* Active Constraints / Rules Banner */}
+        {activeRules.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 px-6 py-2 bg-[#090909] border-b border-[#161616] text-xs font-mono z-10">
+            <span className="text-cyan-400 font-semibold flex items-center gap-1.5 text-[10px] tracking-wider uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              Active Constraints:
+            </span>
+            {activeRules.map((rule, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-red-950/30 border border-red-900/50 text-red-300 text-[11px]"
+              >
+                <span>🛑 {rule}</span>
+                <button
+                  title="Скасувати це правило"
+                  onClick={() => {
+                    const updated = activeRules.filter((_, i) => i !== idx);
+                    setActiveRules(updated);
+                    localStorage.setItem("walbot_rules_" + selectedPersona.id, JSON.stringify(updated));
+                  }}
+                  className="hover:text-white ml-1 text-gray-500 font-bold transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:px-12 space-y-6 scroll-smooth z-10 custom-scrollbar">

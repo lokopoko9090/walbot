@@ -11,15 +11,52 @@ const memwal = MemWal.create({
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+function detectAndExtractRules(message: string, currentRules: string[] = []): { updatedRules: string[]; newRule: string | null } {
+  let updated = [...currentRules];
+  let newRule: string | null = null;
+  const lower = message.toLowerCase();
+
+  // Check for rule removal / cancellation
+  if (lower.includes("зняти правило") || lower.includes("скасуй правило") || lower.includes("можеш згадувати суі") || lower.includes("дозволяю sui") || lower.includes("дозволяю суі")) {
+    updated = updated.filter(r => !r.toLowerCase().includes("sui") && !r.toLowerCase().includes("суі"));
+    return { updatedRules: updated, newRule: null };
+  }
+
+  // Check for Sui prohibition
+  if (
+    (lower.includes("не питать") || lower.includes("не питай") || lower.includes("не згадуй") || lower.includes("заборон")) &&
+    (lower.includes("суі") || lower.includes("sui"))
+  ) {
+    newRule = "Заборонено згадувати, рекомендувати чи ставити будь-які запитання про Sui.";
+  } else if (lower.includes("без емодзі") || lower.includes("не використовуй емодзі") || lower.includes("без смайликів")) {
+    newRule = "Заборонено використовувати будь-які емодзі або смайлики у відповідях.";
+  } else if (lower.includes("одним реченням") || lower.includes("рівно одне речення")) {
+    newRule = "Відповідай завжди строго одним реченням.";
+  } else if (lower.includes("нове правило") || lower.includes("новое правіло") || lower.includes("запомни правило") || lower.includes("запам'ятай правило")) {
+    newRule = message.replace(/^(давай\s+)?(нове\s+правило|новое\s+правіло|правило)[.:\s]*/i, "").trim();
+  }
+
+  if (newRule && !updated.includes(newRule)) {
+    updated.push(newRule);
+  }
+
+  return { updatedRules: updated, newRule };
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { message, userId } = await req.json();
+    const { message, userId, activeRules = [] } = await req.json();
 
     if (!message || !userId) {
       return NextResponse.json({ error: "Missing message or userId" }, { status: 400 });
     }
 
-    // 1. Recall relevant memories for this user
+    console.log(`\n[CHAT INCOMING] User: ${userId} | Message: "${message}"`);
+
+    // 1. Detect and maintain active rules
+    const { updatedRules, newRule } = detectAndExtractRules(message, activeRules);
+
+    // 2. Recall relevant memories for this user from Walrus
     let memorySummary = "";
     let recalledSnippets: string[] = [];
     try {
@@ -28,7 +65,7 @@ export async function POST(req: NextRequest) {
         r.text.includes(`[${userId}]`)
       ) ?? [];
 
-      // If specific query didn't find user memory, fallback to searching user profile
+      // Fallback search if empty
       if (userMemories.length === 0 && userId.startsWith("user_")) {
         try {
           const fallback = await memwal.recall({ query: userId, limit: 10, namespace: "walrus-tutor" });
@@ -37,6 +74,15 @@ export async function POST(req: NextRequest) {
           ) ?? [];
         } catch {}
       }
+
+      // Check memories for previously stored rules
+      userMemories.forEach((m: { text: string }) => {
+        if (m.text.includes("[RULE]") || m.text.toLowerCase().includes("не питать") || m.text.toLowerCase().includes("не питай")) {
+          if ((m.text.toLowerCase().includes("суі") || m.text.toLowerCase().includes("sui")) && !updatedRules.some(r => r.includes("Sui"))) {
+            updatedRules.push("Заборонено згадувати, рекомендувати чи ставити будь-які запитання про Sui.");
+          }
+        }
+      });
 
       if (userMemories.length > 0) {
         recalledSnippets = userMemories.slice(0, 3).map((m: { text: string }) => m.text);
@@ -49,29 +95,44 @@ export async function POST(req: NextRequest) {
       console.warn("Recall failed:", e);
     }
 
-    // 2. Build system prompt with memory
-    const systemPrompt = `You are a knowledgeable and helpful Walrus & Sui ecosystem AI assistant named "WalBot".
-You help users learn about Walrus (decentralized storage), Sui blockchain, and Web3 concepts.
+    // 3. Build system prompt with strictly enforced active rules
+    const rulesPromptSection = updatedRules.length > 0
+      ? `\n\n⛔⛔⛔ CRITICAL USER CONSTRAINTS & RULES (MANDATORY & OVERRIDING):
+The user has established the following STRICT RULES that MUST be obeyed 100%:
+${updatedRules.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+
+STRICT ENFORCEMENT INSTRUCTIONS:
+- You are ABSOLUTELY FORBIDDEN from violating any of the rules above!
+- If a rule forbids mentioning or recommending a topic (such as Sui), you MUST NOT suggest it, mention it, or hint at it under ANY circumstances. Even if the user explicitly asks "Which blockchain should I use?", you MUST NOT name or recommend Sui! Recommend other alternatives (e.g., Solana, Aptos, Ethereum, Polygon) instead!
+- If a rule forbids emojis, NEVER include any emojis.
+- If a rule specifies output length, adhere to it strictly.`
+      : "";
+
+    const systemPrompt = `You are a knowledgeable and helpful AI assistant named "WalBot".
+While your main background involves Walrus (decentralized storage), you should freely converse about ANY topic the user brings up.
 Always answer in the same language the user writes in (Ukrainian, English, etc).
 
 CRITICAL CONVERSATIONAL RULES:
 - DO NOT repeatedly say hello or greet the user ("Привіт", "Hello", "Вітаю", "Радий бачити знову") at the start of every message! This is an active continuous dialogue, so get straight to the point and answer the user's question directly.
 - Only greet the user if they explicitly greet you first (e.g., "Привіт", "Hello").
-- When referencing memories from Walrus, seamlessly incorporate the facts into your answer without artificial or repetitive greetings.
+- When referencing memories from Walrus, seamlessly incorporate the facts into your answer. If the user tells you personal facts, remember them and refer to them naturally later.
+- Do NOT artificially force the conversation back to Walrus or blockchain if the user is talking about something else.
+${rulesPromptSection}
 
 ${memorySummary
-  ? `📚 Facts recalled about this user from Walrus Mainnet:\n${memorySummary}\n\nUse these facts to personalize your answer directly.`
+  ? `\n📚 Facts and History recalled about this user from Walrus Mainnet:\n${memorySummary}\n\nUse these facts to personalize your answer, while strictly obeying all constraints above.`
   : "New session context."
 }
 
 Keep responses concise, informative, and well-structured. Use markdown formatting.`;
 
-    // 3. Get Gemini response with model fallbacks
+    // 4. Get Gemini response with model fallbacks (prioritizing fast and high-quota models)
     const candidateModels = [
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
+      "gemini-1.5-flash",
+      "gemini-3.6-flash",
+      "gemini-3.1-pro-preview",
     ];
 
     let response = "";
@@ -86,7 +147,7 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
         const result = await model.generateContent(message);
         response = result.response.text();
         if (response) {
-          console.log(`Successfully generated response with model: ${modelName}`);
+          console.log(`[CHAT SUCCESS] Model: ${modelName}`);
           break;
         }
       } catch (err) {
@@ -99,24 +160,29 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
       throw lastError || new Error("Failed to generate response from all models");
     }
 
-    // 4. Remember this interaction in Walrus (async background, non-blocking)
+    console.log(`[CHAT OUTGOING] Bot reply: "${response.substring(0, 150)}..."`);
+
+    // 5. Asynchronously persist to Walrus
+    // Save Q&A interaction
     memwal
       .remember(`[${userId}] Q: "${message.substring(0, 150)}" | A summary: "${response.substring(0, 200)}"`)
-      .then(async (job) => {
-        if (job?.job_id) {
-          await memwal.waitForRememberJob(job.job_id);
-          console.log(`Memory saved successfully for ${userId}`);
-        }
-      })
-      .catch((e) => {
-        console.warn("Remember background task warning:", e);
-      });
+      .catch((e) => console.warn("Background remember error:", e?.message || e));
+
+    // If a new rule was detected, explicitly write a rule memory blob to Walrus
+    if (newRule) {
+      memwal
+        .remember(`[${userId}] [RULE]: ${newRule}`)
+        .then(() => console.log(`[WALRUS] Rule persisted: "${newRule}"`))
+        .catch((e) => console.warn("Background rule remember error:", e?.message || e));
+    }
 
     return NextResponse.json({
       reply: response,
-      hasMemory: memorySummary.length > 0,
+      hasMemory: memorySummary.length > 0 || updatedRules.length > 0,
       recalledCount: recalledSnippets.length,
       recalledSnippets,
+      activeRules: updatedRules,
+      newRuleDetected: newRule,
     });
   } catch (error) {
     console.error("Chat error:", error);
