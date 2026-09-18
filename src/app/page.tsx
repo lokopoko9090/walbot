@@ -112,12 +112,12 @@ export default function HomePage() {
     setGuestId(savedGuest);
   }, []);
 
-  // Update initial welcome message on persona change
+  // Update initial welcome message on persona change and load history
   useEffect(() => {
     const isGuest = selectedPersona.id === "user_guest";
     const welcomeText = isGuest
       ? `✦ **GUEST MODE // セッション開始**\n\nПривіт! Будь-яке повідомлення, яке ти надішлеш, синхронізується з **Walrus Mainnet** у режимі реального часу. Напиши своє запитання або обери швидку підказку нижче!`
-      : `✦ **PERSONA LINKED // ${selectedPersona.name.toUpperCase()} (${selectedPersona.jpName})**\n\nСинхронізовано з **10 ончейн-спогадами** на Walrus Mainnet. Я пам'ятаю весь твій стек та історію навчання. Тисни підказку або запитуй будь-що!`;
+      : `✦ **PERSONA LINKED // ${selectedPersona.name.toUpperCase()} (${selectedPersona.jpName})**\n\nСинхронізовано з **${selectedPersona.blobsCount} ончейн-спогадами** на Walrus Mainnet. Я пам'ятаю весь твій стек та історію навчання. Тисни підказку або запитуй будь-що!`;
 
     setMessages([
       {
@@ -128,6 +128,30 @@ export default function HomePage() {
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
+
+    if (!isGuest) {
+      setLoading(true);
+      fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedPersona.id }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.history && data.history.length > 0) {
+            const historyMessages = data.history.reverse().map((hist: string, i: number) => ({
+              id: "hist-" + Date.now() + "-" + i,
+              role: "bot" as const,
+              text: `*Recalled memory from Mainnet:*\n\n${hist}`,
+              hasMemory: true,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            }));
+            setMessages((prev) => [...prev, ...historyMessages]);
+          }
+        })
+        .catch((err) => console.warn("Failed to load history", err))
+        .finally(() => setLoading(false));
+    }
   }, [selectedPersona]);
 
   useEffect(() => {
