@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🐋 WalBot: Walrus & Sui Ecosystem Learning Assistant
 
-## Getting Started
+> **A persistent AI chatbot that remembers you across sessions, conversations, and devices using Walrus Memory on Mainnet.**
 
-First, run the development server:
+Built for **Walrus Sessions 8: Chatbots That Remember**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![Walrus Memory](https://img.shields.io/badge/Walrus%20Memory-Mainnet-blue)](https://memory.walrus.xyz)
+[![LLM](https://img.shields.io/badge/LLM-Google%20Gemini%20API-4285F4?logo=google)](https://ai.google.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 🌟 Overview
+
+Most AI chatbots suffer from **amnesia**: the moment a conversation ends, all context, user preferences, and progress are lost.
+
+**WalBot** solves this by integrating **Walrus Memory (`@mysten-incubation/memwal`)** on **Walrus Mainnet**:
+- 🧠 **Cross-Session Memory:** Remembers what topics you've covered, your technical stack, and your learning progress.
+- 🌐 **Decentralized & Portable:** All memory entries are cryptographically signed and stored on Walrus decentralized storage — no centralized database required.
+- ⚡ **Seamless Web2 UX with Web3 Power:** Users interact with a responsive chat interface without needing browser extensions or crypto wallets; the server handles Mainnet interactions securely.
+- 🤖 **Beyond the Big Two:** Powered by **Google Gemini API** (`gemini-2.5-flash` / `gemini-3.6-flash`), qualifying for the open-model prize track.
+
+---
+
+## 🏗️ Architecture
+
+```
+User Browser (Session / LocalStorage ID)
+                 │
+                 ▼  POST /api/chat { message, userId }
+┌─────────────────────────────────────────────────────────┐
+│ Next.js Backend                                         │
+│                                                         │
+│  1. memwal.recall({ query: userMessage })               │
+│     └─► Semantic search in Walrus Mainnet               │
+│                                                         │
+│  2. Inject memories into Gemini System Prompt           │
+│     └─► "📚 What you remember about this user: ..."     │
+│                                                         │
+│  3. Generate response via Google Gemini API             │
+│                                                         │
+│  4. memwal.remember(`[userId] Q: ... | A: ...`)         │
+│     └─► Stores new verifiable memory blob on Walrus     │
+└─────────────────────────────────────────────────────────┘
+                 │
+                 ▼  JSON { reply, hasMemory: true/false }
+         Bot UI Response
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Quick Start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Clone the repository
+```bash
+git clone https://github.com/<your-username>/walrus-memory-bot.git
+cd walrus-memory-bot
+```
 
-## Learn More
+### 2. Install dependencies
+```bash
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Configure environment variables
+Create a `.env.local` file in the root directory:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+# Walrus Memory Credentials (from https://memory.walrus.xyz)
+MEMWAL_PRIVATE_KEY=your_walrus_delegate_private_key_hex
+MEMWAL_ACCOUNT_ID=your_walrus_account_id
+MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Google Gemini API Key (from https://aistudio.google.com/apikey)
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-## Deploy on Vercel
+### 4. Run development server
+```bash
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🧪 Testing Memory in Action
+
+1. **Session 1:** Introduce yourself and mention what you're building:
+   > *"Hi! I'm Anna, a frontend developer building a DApp with Next.js and Walrus."*
+2. **Session 2:** Open a new incognito window or refresh after a while:
+   > *"What is my tech stack and what project am I working on?"*
+3. **Result:** WalBot displays the `🧠 Using your memory` badge and recalls your name and stack from the Walrus Mainnet storage!
+
+---
+
+## 📦 Tech Stack
+
+- **Framework:** [Next.js 16 (App Router)](https://nextjs.org/) + [React 19](https://react.dev/)
+- **Decentralized Storage:** [`@mysten-incubation/memwal`](https://www.npmjs.com/package/@mysten-incubation/memwal) on Walrus Mainnet
+- **LLM:** [`@google/generative-ai`](https://www.npmjs.com/package/@google/generative-ai) (Google Gemini API)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+
+---
+
+## 📄 License
+
+MIT © 2026
