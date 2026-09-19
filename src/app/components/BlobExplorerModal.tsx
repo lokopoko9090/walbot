@@ -83,51 +83,13 @@ const STATIC_BLOBS = [
   },
 ];
 
-const BUG_REPORTS = [
-  {
-    issue: "Issue #932",
-    url: "https://github.com/MystenLabs/MemWal/issues/932",
-    type: "Concurrency / Race Condition",
-    title: "Idempotency Key Collision in pendingRememberKeys",
-    status: "Reported & WalForm Verified",
-  },
-  {
-    issue: "Issue #933",
-    url: "https://github.com/MystenLabs/MemWal/issues/933",
-    type: "Cryptography / Zero-Key Poisoning",
-    title: "In-flight signing during destroy() creates valid zero-key signature",
-    status: "Reported & WalForm Verified",
-  },
-  {
-    issue: "Issue #934",
-    url: "https://github.com/MystenLabs/MemWal/issues/934",
-    type: "Security / Info Disclosure",
-    title: "Incomplete loopback URL redaction leaks TEE enclave network topology",
-    status: "Reported & WalForm Verified",
-  },
-  {
-    issue: "Issue #935",
-    url: "https://github.com/MystenLabs/MemWal/issues/935",
-    type: "Math / Token Budget Loss",
-    title: "Premature Math.floor() drops sub-token budget allocations to 0",
-    status: "Reported & WalForm Verified",
-  },
-  {
-    issue: "Issue #936",
-    url: "https://github.com/MystenLabs/MemWal/issues/936",
-    type: "LLM Schema Violation",
-    title: "withMemWal mid-dialogue system message injection triggers HTTP 400",
-    status: "Reported & WalForm Verified",
-  },
-];
-
 export default function BlobExplorerModal({
   isOpen,
   onClose,
   activePersona,
   activeRules,
 }: BlobExplorerModalProps) {
-  const [tab, setTab] = useState<"blobs" | "audit" | "export">("blobs");
+  const [tab, setTab] = useState<"blobs" | "export">("blobs");
   const [copied, setCopied] = useState(false);
   const [filter, setFilter] = useState<string>("all");
 
@@ -250,17 +212,6 @@ export default function BlobExplorerModal({
             ⛓️ Verified Blobs ({STATIC_BLOBS.length})
           </button>
           <button
-            onClick={() => setTab("audit")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
-              tab === "audit"
-                ? "border-cyan-400 text-cyan-300 bg-cyan-950/20"
-                : "border-transparent text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            <span>🛡️ SDK Bug Audit (5/5)</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          </button>
-          <button
             onClick={() => setTab("export")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               tab === "export"
@@ -337,45 +288,6 @@ export default function BlobExplorerModal({
             </>
           )}
 
-          {tab === "audit" && (
-            <div className="space-y-3">
-              <div className="bg-[#0c1520] border border-cyan-900/40 p-3 rounded-lg text-gray-300 text-[11px] leading-relaxed">
-                <span className="text-cyan-400 font-bold">🏆 Walrus Bug Bounty Submissions:</span>{" "}
-                During the development of WalBot, our team conducted a deep cryptographic and concurrency audit of the official{" "}
-                <code className="bg-cyan-950 px-1 py-0.5 rounded text-cyan-300">@mysten-incubation/memwal</code> SDK, discovering 5 reproducible vulnerabilities that were submitted directly to Mysten Labs.
-              </div>
-
-              <div className="space-y-2">
-                {BUG_REPORTS.map((report, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#0b1016] border border-[#182330] rounded-lg p-3 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-cyan-400 font-bold">{report.issue}</span>
-                        <span className="text-[10px] text-red-400/90 font-semibold px-1.5 py-0.5 rounded bg-red-950/40 border border-red-900/50">
-                          {report.type}
-                        </span>
-                      </div>
-                      <h4 className="text-gray-200 text-xs mt-1 font-semibold">{report.title}</h4>
-                      <span className="text-[10px] text-green-400 mt-1 inline-block">
-                        ✓ {report.status}
-                      </span>
-                    </div>
-                    <a
-                      href={report.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 rounded bg-cyan-950/50 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 hover:text-white text-[10px] font-bold shrink-0 transition-all"
-                    >
-                      View Issue ↗
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {tab === "export" && (
             <div className="space-y-4">
