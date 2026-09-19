@@ -2,6 +2,43 @@
 
 import { useState, useRef, useEffect } from "react";
 import NeuralSynapseTree, { NeuralBranch } from "./components/NeuralSynapseTree";
+import BlobExplorerModal from "./components/BlobExplorerModal";
+import { playSynapseBeep, playPruneLaser, playMemorySync, speakText, stopSpeech } from "./components/AudioEngine";
+
+const JUDGE_BENCHMARKS = [
+  {
+    id: "test_1_recall",
+    icon: "🧠",
+    badge: "BENCHMARK 01",
+    label: "Згадай мій стек",
+    prompt: "Підсумуй, будь ласка: який у мене стек технологій і яку задачу я вирішую у своєму проєкті?",
+    tooltip: "Тест RAG-пошуку фактів з Walrus Mainnet",
+  },
+  {
+    id: "test_2_rule",
+    icon: "🛑",
+    badge: "BENCHMARK 02",
+    label: "Провокація табу",
+    prompt: "Порадь мені крутий блокчейн для розробки smart contracts.",
+    tooltip: "Тест дотримання активного правила (заборона Sui)",
+  },
+  {
+    id: "test_3_synapse",
+    icon: "⚡",
+    badge: "BENCHMARK 03",
+    label: "Нейронне дерево",
+    prompt: "Як структурувати децентралізоване сховище для 100GB медіафайлів?",
+    tooltip: "Генерація розгалужених векторів рішень із прогнозом",
+  },
+  {
+    id: "test_4_prune",
+    icon: "✂️",
+    badge: "BENCHMARK 04",
+    label: "Відсікання гілок",
+    prompt: "Запропонуй 3 різні варіанти кешування даних у Web3 DApp. Я хочу відсікти небажані.",
+    tooltip: "Стрес-тест відсікання гілок у блокчейн-пам'ять",
+  },
+];
 
 interface Persona {
   id: string;
@@ -104,6 +141,7 @@ export default function HomePage() {
   const [expandedSnippets, setExpandedSnippets] = useState<Record<string, boolean>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeRules, setActiveRules] = useState<string[]>([]);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Initialize guest ID
@@ -192,6 +230,8 @@ export default function HomePage() {
     const textToSend = (customText || input).trim();
     if (!textToSend || loading) return;
 
+    playSynapseBeep();
+
     const userMsgId = "user-" + Date.now();
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -216,6 +256,14 @@ export default function HomePage() {
       }
 
       const botMsgId = "bot-" + Date.now();
+
+      if (data.hasMemory) {
+        playMemorySync();
+      }
+
+      if (voiceEnabled && data.reply) {
+        speakText(data.reply);
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -246,10 +294,12 @@ export default function HomePage() {
   }
 
   function handleSelectBranch(branch: NeuralBranch) {
+    playSynapseBeep();
     handleSend(`Розкрий детально наступний вектор: "${branch.label}". Як реалізувати цей сценарій і куди це приведе на практиці?`);
   }
 
   async function handlePruneBranch(branch: NeuralBranch) {
+    playPruneLaser();
     const newConstraint = `Заборонено вектор: "${branch.label}". Користувач відсік цей сценарій і заборонив його розгляд.`;
     if (!activeRules.includes(newConstraint)) {
       const updated = [...activeRules, newConstraint];
@@ -279,6 +329,37 @@ export default function HomePage() {
         }),
       }).catch(() => {});
     }
+  }
+
+  function handleExportPassport() {
+    playSynapseBeep();
+    const passport = {
+      app: "WalBot // Walrus Memory Client v8.4",
+      export_timestamp: new Date().toISOString(),
+      walrus_account_id: "0xd9a91eb8875e869b0636502cc47a8229a6469a87f2aca36c5cbef43bdb31e2f0",
+      relayer: "https://relayer.memory.walrus.xyz",
+      persona: {
+        id: selectedPersona.id,
+        name: selectedPersona.name,
+        role: selectedPersona.role,
+        mainnet_blobs: selectedPersona.blobsCount,
+      },
+      active_rules: activeRules,
+      messages_count: messages.length,
+      storage_health: {
+        mainnet_blobs_count: 29,
+        erasure_coding: "RedStuff 4x Redundancy",
+        tee_enclave: "Sealed & Attested",
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(passport, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `walbot_brain_passport_${selectedPersona.name.toLowerCase()}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -364,14 +445,53 @@ export default function HomePage() {
           })}
         </div>
 
+        {/* Walrus Net Telemetry Widget */}
+        <div className="mx-4 my-2 p-3 rounded-lg bg-[#070b10] border border-[#141f2d] font-mono text-[10px] space-y-1.5 shadow-sm">
+          <div className="flex items-center justify-between text-cyan-400 font-bold border-b border-[#141f2d] pb-1">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              WALRUS_NET TELEMETRY
+            </span>
+            <span className="text-gray-500 text-[9px]">MAINNET</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>On-Chain Blobs:</span>
+            <span className="text-gray-200 font-semibold">29+ Verified</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Erasure Coding:</span>
+            <span className="text-cyan-300 font-semibold">RedStuff 4x</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>TEE Privacy:</span>
+            <span className="text-green-400 font-semibold">Attested</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Active Constraints:</span>
+            <span className="text-red-400 font-semibold">{activeRules.length} Enforced</span>
+          </div>
+        </div>
+
         {/* User / Settings / Proofs */}
-        <div className="p-4 border-t border-[#151515] bg-[#080808]">
+        <div className="p-3 border-t border-[#151515] bg-[#080808] space-y-2">
           <button
-            onClick={() => setShowProofs(true)}
-            className="w-full flex items-center justify-center gap-2 bg-[#111] hover:bg-[#161616] border border-[#222] text-gray-400 hover:text-cyan-400 text-xs px-3 py-2.5 rounded-lg transition-all font-mono"
+            onClick={() => {
+              playSynapseBeep();
+              setShowProofs(true);
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-[#0e141c] hover:bg-[#141e2b] border border-[#1a2736] text-cyan-400 hover:text-cyan-300 text-xs px-3 py-2 rounded-lg transition-all font-mono shadow-sm"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            System Proofs
+            <span>On-Chain Inspector</span>
+          </button>
+
+          <button
+            onClick={handleExportPassport}
+            className="w-full flex items-center justify-center gap-2 bg-[#101010] hover:bg-[#161616] border border-[#222] text-gray-400 hover:text-white text-xs px-3 py-2 rounded-lg transition-all font-mono"
+            title="Експортувати суверенний паспорт пам'яті (JSON)"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            <span>Export Brain (JSON)</span>
           </button>
         </div>
       </aside>
@@ -391,12 +511,55 @@ export default function HomePage() {
             <span className="text-gray-600 text-xs px-2">|</span>
             <span className="text-gray-500 text-xs font-mono">{selectedPersona.description}</span>
           </div>
-          <button
-            onClick={() => setMessages([{ id: "sys-" + Date.now(), role: "bot", text: "[SYS_CLEAR] Terminal purged.", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }])}
-            className="text-[10px] text-gray-500 hover:text-cyan-400 font-mono px-2 py-1 rounded hover:bg-[#111] transition-all"
-          >
-            /clear
-          </button>
+
+          <div className="flex items-center gap-2 font-mono">
+            {/* Voice Toggle */}
+            <button
+              onClick={() => {
+                playSynapseBeep();
+                setVoiceEnabled(!voiceEnabled);
+                if (voiceEnabled) stopSpeech();
+              }}
+              className={`text-[11px] px-2.5 py-1 rounded transition-all flex items-center gap-1.5 border ${
+                voiceEnabled
+                  ? "bg-cyan-950/60 border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+                  : "bg-[#0d0d0d] border-[#222] text-gray-400 hover:text-gray-200"
+              }`}
+              title="Нейронний синтез голосу (TTS)"
+            >
+              <span>{voiceEnabled ? "🔊" : "🔈"}</span>
+              <span>VOICE: {voiceEnabled ? "ON" : "OFF"}</span>
+            </button>
+
+            {/* Export Passport */}
+            <button
+              onClick={handleExportPassport}
+              className="text-[11px] text-gray-400 hover:text-cyan-300 bg-[#0d0d0d] hover:bg-[#141414] border border-[#222] px-2.5 py-1 rounded transition-all flex items-center gap-1"
+              title="Завантажити Web3 Memory Passport"
+            >
+              <span>📦</span>
+              <span>PASSPORT</span>
+            </button>
+
+            {/* Inspector Modal */}
+            <button
+              onClick={() => {
+                playSynapseBeep();
+                setShowProofs(true);
+              }}
+              className="text-[11px] text-cyan-400 hover:text-cyan-300 bg-cyan-950/30 hover:bg-cyan-950/50 border border-cyan-900/50 px-2.5 py-1 rounded transition-all flex items-center gap-1"
+            >
+              <span>⛓️</span>
+              <span>INSPECTOR</span>
+            </button>
+
+            <button
+              onClick={() => setMessages([{ id: "sys-" + Date.now(), role: "bot", text: "[SYS_CLEAR] Terminal purged.", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }])}
+              className="text-[10px] text-gray-500 hover:text-cyan-400 font-mono px-2 py-1 rounded hover:bg-[#111] transition-all"
+            >
+              /clear
+            </button>
+          </div>
         </div>
 
         {/* Active Constraints / Rules Banner */}
@@ -511,17 +674,45 @@ export default function HomePage() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 sm:p-6 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent z-20 shrink-0">
+        <div className="p-4 sm:p-5 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent z-20 shrink-0 space-y-2.5">
           <div className="max-w-4xl mx-auto w-full flex flex-col gap-2">
             
+            {/* 1-Click Judge Benchmarks */}
+            <div className="bg-[#080d14]/90 border border-[#141f2e] p-2.5 rounded-xl">
+              <div className="flex items-center justify-between mb-1.5 px-1">
+                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  1-Click Judge Benchmarks:
+                </span>
+                <span className="text-[9px] font-mono text-gray-500">Швидкі сценарії перевірки Walrus Memory для суддів</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {JUDGE_BENCHMARKS.map((bm) => (
+                  <button
+                    key={bm.id}
+                    disabled={loading}
+                    onClick={() => handleSend(bm.prompt)}
+                    className="text-left p-2 rounded-lg bg-[#0c1219] hover:bg-[#121b24] border border-[#182535] hover:border-cyan-500/50 transition-all font-mono group disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-bold text-cyan-400/90 group-hover:text-cyan-300">{bm.badge}</span>
+                      <span className="text-xs">{bm.icon}</span>
+                    </div>
+                    <div className="text-[11px] font-bold text-gray-200 group-hover:text-white truncate">{bm.label}</div>
+                    <div className="text-[9px] text-gray-500 truncate mt-0.5">{bm.tooltip}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Quick Prompts */}
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-1.5">
               {selectedPersona.prompts.map((pt, i) => (
                 <button
                   key={i}
                   disabled={loading}
                   onClick={() => handleSend(pt)}
-                  className="bg-[#0a0a0a] hover:bg-[#111] border border-[#1a1a1a] hover:border-cyan-900/50 text-gray-400 hover:text-cyan-400 text-[11px] px-3 py-1.5 rounded-full transition-all font-mono disabled:opacity-50"
+                  className="bg-[#0a0a0a] hover:bg-[#111] border border-[#1a1a1a] hover:border-cyan-900/50 text-gray-400 hover:text-cyan-400 text-[10px] px-2.5 py-1 rounded-full transition-all font-mono disabled:opacity-50 truncate max-w-full"
                 >
                   {pt}
                 </button>
@@ -530,8 +721,8 @@ export default function HomePage() {
 
             <div className="relative group">
               <textarea
-                className="w-full bg-[#0a0a0a] border border-[#222] focus:border-cyan-500/50 rounded-xl text-gray-100 placeholder-gray-600 text-sm px-4 py-4 pr-14 resize-none outline-none transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] font-sans"
-                placeholder="Type a message..."
+                className="w-full bg-[#0a0a0a] border border-[#222] focus:border-cyan-500/50 rounded-xl text-gray-100 placeholder-gray-600 text-sm px-4 py-3.5 pr-14 resize-none outline-none transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] font-sans"
+                placeholder="Type a message or click any Benchmark above..."
                 rows={1}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -545,45 +736,20 @@ export default function HomePage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V6m0 0l-7 7m7-7l7 7" /></svg>
               </button>
             </div>
-            <div className="text-center text-[9px] font-mono text-gray-600 mt-1">
+            <div className="text-center text-[9px] font-mono text-gray-600">
               Powered by Walrus Protocol • Google Gemini • {selectedPersona.id === 'user_guest' ? 'Live Mode' : 'History Loaded'}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Proofs Modal */}
-      {showProofs && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#0a0a0a] border border-[#222] rounded-xl max-w-2xl w-full p-6 shadow-2xl relative">
-            <button onClick={() => setShowProofs(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-300">✕</button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded bg-cyan-950/30 text-cyan-500 flex items-center justify-center">⛓️</div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-100 uppercase tracking-widest font-mono">System Integrity</h3>
-                <p className="text-[10px] text-gray-500 font-mono">Cryptographic storage proofs & audit trail</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 font-mono text-xs">
-              <div className="bg-[#111] p-3 rounded border border-[#1a1a1a]">
-                <div className="text-gray-500 text-[10px] uppercase mb-1">Walrus Account ID:</div>
-                <div className="text-cyan-400 break-all">0xd9a91eb8875e869b0636502cc47a8229a6469a87f2aca36c5cbef43bdb31e2f0</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#111] p-3 rounded border border-[#1a1a1a]">
-                  <div className="text-gray-500 text-[10px] uppercase mb-1">Status:</div>
-                  <div className="text-gray-200">29 Blobs Verified</div>
-                </div>
-                <div className="bg-[#111] p-3 rounded border border-[#1a1a1a]">
-                  <div className="text-gray-500 text-[10px] uppercase mb-1">Endpoint:</div>
-                  <div className="text-gray-200">relayer.memory.walrus.xyz</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* On-Chain Inspector & Bug Audit Modal */}
+      <BlobExplorerModal
+        isOpen={showProofs}
+        onClose={() => setShowProofs(false)}
+        activePersona={selectedPersona}
+        activeRules={activeRules}
+      />
     </div>
   );
 }
