@@ -705,20 +705,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Quick Prompts */}
-            <div className="flex flex-wrap gap-1.5">
-              {selectedPersona.prompts.map((pt, i) => (
-                <button
-                  key={i}
-                  disabled={loading}
-                  onClick={() => handleSend(pt)}
-                  className="bg-[#0a0a0a] hover:bg-[#111] border border-[#1a1a1a] hover:border-cyan-900/50 text-gray-400 hover:text-cyan-400 text-[10px] px-2.5 py-1 rounded-full transition-all font-mono disabled:opacity-50 truncate max-w-full"
-                >
-                  {pt}
-                </button>
-              ))}
-            </div>
-
             <div className="relative group">
               <textarea
                 className="w-full bg-[#0a0a0a] border border-[#222] focus:border-cyan-500/50 rounded-xl text-gray-100 placeholder-gray-600 text-sm px-4 py-3.5 pr-14 resize-none outline-none transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] font-sans"
