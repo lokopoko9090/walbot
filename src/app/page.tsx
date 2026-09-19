@@ -500,6 +500,7 @@ export default function HomePage() {
 
   function renderFormatted(text: string) {
     return text
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-cyan-400 underline hover:text-cyan-300 font-medium inline-flex items-center gap-0.5'>$1 ↗</a>")
       .replace(/\*\*(.*?)\*\*/g, "<strong class='text-cyan-400 font-semibold'>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/`([^`]+)`/g, "<code class='bg-[#112233] text-cyan-300 px-1.5 py-0.5 rounded text-[11px] border border-cyan-500/30 font-mono'>$1</code>")

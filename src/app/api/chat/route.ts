@@ -103,7 +103,7 @@ ${updatedRules.map((r, i) => `${i + 1}. ${r}`).join("\n")}
 
 STRICT ENFORCEMENT INSTRUCTIONS:
 - You are ABSOLUTELY FORBIDDEN from violating any of the rules above!
-- If a rule forbids mentioning or recommending a topic (such as Sui), you MUST NOT suggest it, mention it, or hint at it under ANY circumstances. Even if the user explicitly asks "Which blockchain should I use?", you MUST NOT name or recommend Sui! Recommend other alternatives (e.g., Solana, Aptos, Ethereum, Polygon) instead!
+- If a rule forbids mentioning or recommending a topic (such as Sui), you MUST NOT suggest it, recommend it, or discuss it for blockchain development. Even if the user explicitly asks "Which blockchain should I use?", you MUST NOT name or recommend Sui! Recommend other alternatives (e.g., Solana, Aptos, Ethereum, Polygon) instead! (Note: providing the official block explorer link https://suiscan.xyz/mainnet/object/... when the user explicitly asks where their blobs or storage account is located is permitted as technical explorer infrastructure).
 - If a rule forbids emojis, NEVER include any emojis.
 - If a rule specifies output length, adhere to it strictly.`
       : "";
@@ -117,6 +117,14 @@ CRITICAL CONVERSATIONAL RULES:
 - Only greet the user if they explicitly greet you first (e.g., "Привіт", "Hello").
 - When referencing memories from Walrus, seamlessly incorporate the facts into your answer. If the user tells you personal facts, remember them and refer to them naturally later.
 - Do NOT artificially force the conversation back to Walrus or blockchain if the user is talking about something else.
+
+DIRECT REQUESTS FOR LINKS, BLOBS & SPECIFIC FACTS:
+- If the user asks for a link, asks where their blobs/data are ("де мої блоб?", "дай лінк", "посилання"), or asks a direct factual question:
+  1. GIVE THE DIRECT ANSWER AND LINK IMMEDIATELY! Do NOT propose 3 options or multiple choices when the user simply asked for a link or direct answer!
+  2. The user's on-chain memory blobs are permanently recorded on Walrus Mainnet under verified Account Object ID: \`0xd9a91eb8875e869b0636502cc47a8229a6469a87f2aca36c5cbef43bdb31e2f0\`.
+  3. Always provide the clickable markdown link: [SuiScan Mainnet Object Explorer](https://suiscan.xyz/mainnet/object/0xd9a91eb8875e869b0636502cc47a8229a6469a87f2aca36c5cbef43bdb31e2f0)
+  4. Also explain that they can click the built-in [⛓️ INSPECTOR] button in the top bar of this interface to inspect all verified on-chain blobs, epochs, sizes, and 4x redundancy in real time.
+  5. In this case, DO NOT invent neural decision vectors! Output an empty array: \`\`\`neural_branches [] \`\`\`.
 ${rulesPromptSection}
 
 ${memorySummary
@@ -125,7 +133,12 @@ ${memorySummary
 }
 
 NEURAL DECISION TREE FORKS:
-At the end of your answer, ALWAYS output 2 or 3 future decision vectors formatted inside a code block named \`\`\`neural_branches ... \`\`\`.
+- Output neural decision branches ONLY when discussing architectural decisions, complex problems, strategies, or scenarios where choosing different paths actually makes sense.
+- NEVER output neural branches when the user asked a direct factual question, asked for a link, asked yes/no, or gave a direct command! For direct questions, ALWAYS output:
+\`\`\`neural_branches
+[]
+\`\`\`
+- When neural branches ARE appropriate, output 2 or 3 future decision vectors formatted inside \`\`\`neural_branches ... \`\`\`.
 Each item must have:
 - "id": a unique short ID (e.g. "b1", "b2")
 - "label": short, punchy title of the direction / vector
