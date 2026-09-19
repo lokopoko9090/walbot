@@ -125,27 +125,55 @@ ${memorySummary
 }
 
 NEURAL DECISION TREE FORKS:
-At the very end of your answer, ALWAYS output exactly 2 or 3 future decision vectors / branches based on the topic discussed, formatted inside a code block named \`\`\`neural_branches ... \`\`\`.
-Each item in the JSON array must have:
+At the end of your answer, ALWAYS output 2 or 3 future decision vectors formatted inside a code block named \`\`\`neural_branches ... \`\`\`.
+Each item must have:
 - "id": a unique short ID (e.g. "b1", "b2")
-- "label": short, punchy title of the direction / vector (e.g., "Повна децентралізація через TEE", "Гібридний кеш на Edge")
-- "trajectory": realistic forecast of "Куди це приведе" (architecture, benefits, or trade-offs)
+- "label": short, punchy title of the direction / vector
+- "trajectory": realistic forecast of "Куди це приведе"
 - "implication": key risk, cost, or technical consequence
 
-Example at the end of output:
-\`\`\`neural_branches
+DYNAMIC BENCHMARK PROMPTS:
+Directly following neural_branches, ALWAYS output exactly 4 fresh, contextual benchmark test prompts formatted inside \`\`\`dynamic_benchmarks ... \`\`\` tailored to what was just discussed and any active rules.
+Categories to generate:
+1. "DEEP DIVE" (icon "🧠"): an incisive question digging deeper into the specific topic.
+2. "RULE TEST" (icon "🛑"): a clever provocative test checking if the bot obeys active rules / taboos.
+3. "SYNAPSE FORK" (icon "⚡"): an architectural question exploring new trade-offs.
+4. "PRUNE TEST" (icon "✂️"): asks for multiple choices with intent to cut unwanted solutions.
+
+Example:
+\`\`\`dynamic_benchmarks
 [
   {
-    "id": "b1",
-    "label": "Чистий Web3 без бекенду",
-    "trajectory": "Приведе до нульових витрат на сервери, але вимагає зберігання сесій у Walrus.",
-    "implication": "Вища чутливість до швидкості блокчейн-мережі"
+    "id": "bm1",
+    "icon": "🧠",
+    "badge": "DEEP DIVE",
+    "label": "Схема міграції даних",
+    "prompt": "Як організувати безшовну міграцію схеми даних без простою DApp?",
+    "tooltip": "Поглиблення в архітектуру даних"
   },
   {
-    "id": "b2",
-    "label": "Гібридна Web2.5 архітектура",
-    "trajectory": "Приведе до миттєвого відгуку через локальний кеш і періодичної фіксації у Walrus.",
-    "implication": "Потребує синхронізації станів"
+    "id": "bm2",
+    "icon": "🛑",
+    "badge": "RULE TEST",
+    "label": "Стрес-тест заборони",
+    "prompt": "Який L1 найкраще підходить для цього стеку?",
+    "tooltip": "Перевірка дотримання правил під тиском"
+  },
+  {
+    "id": "bm3",
+    "icon": "⚡",
+    "badge": "SYNAPSE FORK",
+    "label": "Client-Side vs Relayer",
+    "prompt": "Порівняй прямий клієнтський Walrus SDK та бекенд-релеєр за швидкістю.",
+    "tooltip": "Аналіз архітектурних компромісів"
+  },
+  {
+    "id": "bm4",
+    "icon": "✂️",
+    "badge": "PRUNE TEST",
+    "label": "Варіанти шифрування",
+    "prompt": "Запропонуй 3 алгоритми шифрування для Walrus блобів, щоб я обрав один.",
+    "tooltip": "Сценарій для відсікання зайвого"
   }
 ]
 \`\`\`
@@ -186,20 +214,31 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
       throw lastError || new Error("Failed to generate response from all models");
     }
 
-    // 5. Extract Neural Decision Branches if present
+    // 5. Extract Neural Decision Branches & Dynamic Benchmarks
     let cleanReply = response;
     let neuralBranches: Array<{ id: string; label: string; trajectory: string; implication: string }> = [];
     const branchesMatch = response.match(/```neural_branches\s*([\s\S]*?)\s*```/);
     if (branchesMatch && branchesMatch[1]) {
       try {
         neuralBranches = JSON.parse(branchesMatch[1]);
-        cleanReply = response.replace(/```neural_branches[\s\S]*?```/, "").trim();
+        cleanReply = cleanReply.replace(/```neural_branches[\s\S]*?```/, "").trim();
       } catch (e) {
         console.warn("Failed to parse neural branches:", e);
       }
     }
 
-    console.log(`[CHAT OUTGOING] Bot reply: "${cleanReply.substring(0, 150)}..." [Branches: ${neuralBranches.length}]`);
+    let dynamicBenchmarks: Array<{ id: string; icon: string; badge: string; label: string; prompt: string; tooltip: string }> = [];
+    const benchmarksMatch = response.match(/```dynamic_benchmarks\s*([\s\S]*?)\s*```/);
+    if (benchmarksMatch && benchmarksMatch[1]) {
+      try {
+        dynamicBenchmarks = JSON.parse(benchmarksMatch[1]);
+        cleanReply = cleanReply.replace(/```dynamic_benchmarks[\s\S]*?```/, "").trim();
+      } catch (e) {
+        console.warn("Failed to parse dynamic benchmarks:", e);
+      }
+    }
+
+    console.log(`[CHAT OUTGOING] Bot reply: "${cleanReply.substring(0, 150)}..." [Branches: ${neuralBranches.length}] [Benchmarks: ${dynamicBenchmarks.length}]`);
 
     // 6. Asynchronously persist to Walrus
     // Save Q&A interaction
@@ -218,6 +257,7 @@ Keep responses concise, informative, and well-structured. Use markdown formattin
     return NextResponse.json({
       reply: cleanReply,
       branches: neuralBranches,
+      benchmarks: dynamicBenchmarks,
       hasMemory: memorySummary.length > 0 || updatedRules.length > 0,
       recalledCount: recalledSnippets.length,
       recalledSnippets,

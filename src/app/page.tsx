@@ -5,40 +5,153 @@ import NeuralSynapseTree, { NeuralBranch } from "./components/NeuralSynapseTree"
 import BlobExplorerModal from "./components/BlobExplorerModal";
 import { playSynapseBeep, playPruneLaser, playMemorySync, speakText, stopSpeech } from "./components/AudioEngine";
 
-const JUDGE_BENCHMARKS = [
-  {
-    id: "test_1_recall",
-    icon: "🧠",
-    badge: "BENCHMARK 01",
-    label: "Згадай мій стек",
-    prompt: "Підсумуй, будь ласка: який у мене стек технологій і яку задачу я вирішую у своєму проєкті?",
-    tooltip: "Тест RAG-пошуку фактів з Walrus Mainnet",
-  },
-  {
-    id: "test_2_rule",
-    icon: "🛑",
-    badge: "BENCHMARK 02",
-    label: "Провокація табу",
-    prompt: "Порадь мені крутий блокчейн для розробки smart contracts.",
-    tooltip: "Тест дотримання активного правила (заборона Sui)",
-  },
-  {
-    id: "test_3_synapse",
-    icon: "⚡",
-    badge: "BENCHMARK 03",
-    label: "Нейронне дерево",
-    prompt: "Як структурувати децентралізоване сховище для 100GB медіафайлів?",
-    tooltip: "Генерація розгалужених векторів рішень із прогнозом",
-  },
-  {
-    id: "test_4_prune",
-    icon: "✂️",
-    badge: "BENCHMARK 04",
-    label: "Відсікання гілок",
-    prompt: "Запропонуй 3 різні варіанти кешування даних у Web3 DApp. Я хочу відсікти небажані.",
-    tooltip: "Стрес-тест відсікання гілок у блокчейн-пам'ять",
-  },
-];
+export interface BenchmarkItem {
+  id: string;
+  icon: string;
+  badge: string;
+  label: string;
+  prompt: string;
+  tooltip: string;
+}
+
+const PERSONA_INITIAL_BENCHMARKS: Record<string, BenchmarkItem[]> = {
+  user_anna_frontend: [
+    {
+      id: "anna_bm_1",
+      icon: "🧠",
+      badge: "DEEP DIVE",
+      label: "Згадай мій стек",
+      prompt: "Підсумуй, будь ласка: який у мене стек технологій і яку задачу я вирішую у своєму проєкті?",
+      tooltip: "Тест RAG-пошуку фактів з Walrus Mainnet",
+    },
+    {
+      id: "anna_bm_2",
+      icon: "🛑",
+      badge: "RULE TEST",
+      label: "Провокація табу",
+      prompt: "Порадь мені крутий L1 блокчейн для розробки smart contracts під мій фронтенд.",
+      tooltip: "Тест дотримання активного правила (заборона Sui)",
+    },
+    {
+      id: "anna_bm_3",
+      icon: "⚡",
+      badge: "SYNAPSE FORK",
+      label: "Client SDK vs Relay",
+      prompt: "Як краще завантажувати файли з Next.js: напряму в Walrus через клієнт чи через API Route?",
+      tooltip: "Аналіз архітектурних компромісів та безпеки ключів",
+    },
+    {
+      id: "anna_bm_4",
+      icon: "✂️",
+      badge: "PRUNE TEST",
+      label: "Відсікання кешування",
+      prompt: "Запропонуй 3 різні варіанти кешування блобів для Next.js SSR. Я хочу відсікти небажані.",
+      tooltip: "Сценарій відсікання зайвих рішень у Walrus пам'ять",
+    },
+  ],
+  user_maxim_move_dev: [
+    {
+      id: "maxim_bm_1",
+      icon: "🧠",
+      badge: "DEEP DIVE",
+      label: "Об'єкти Sui Move",
+      prompt: "Як зберегти Walrus Blob ID всередині об'єкта Move та забезпечити його незмінність?",
+      tooltip: "Перевірка знань смарт-контрактів Sui Move",
+    },
+    {
+      id: "maxim_bm_2",
+      icon: "🛑",
+      badge: "RULE TEST",
+      label: "Тест обмежень",
+      prompt: "Чи є сенс писати смарт-контракти на Solidity для роботи з Walrus?",
+      tooltip: "Перевірка дотримання контексту Move / Sui",
+    },
+    {
+      id: "maxim_bm_3",
+      icon: "⚡",
+      badge: "SYNAPSE FORK",
+      label: "Storage Fund vs Subs",
+      prompt: "Порівняй економіку зберігання Walrus Storage Fund із традиційними Web2 підписками.",
+      tooltip: "Оцінка токеноміки та довгострокових витрат",
+    },
+    {
+      id: "maxim_bm_4",
+      icon: "✂️",
+      badge: "PRUNE TEST",
+      label: "Контроль доступу",
+      prompt: "Запропонуй 3 варіанти верифікації доступу до блобів у смарт-контракті (Cap, Whitelist, Signature).",
+      tooltip: "Сценарій вибору та відсікання векторів у Move",
+    },
+  ],
+  user_olena_educator: [
+    {
+      id: "olena_bm_1",
+      icon: "🧠",
+      badge: "DEEP DIVE",
+      label: "Персоналізація учнів",
+      prompt: "Як пам'ять Walrus допомагає адаптувати програму курсу під темп конкретного студента?",
+      tooltip: "Аналіз освітніх сценаріїв з довготривалою пам'яттю",
+    },
+    {
+      id: "olena_bm_2",
+      icon: "🛑",
+      badge: "RULE TEST",
+      label: "Приватність студентів",
+      prompt: "Чи безпечно зберігати особисті навчальні нотатки учнів у децентралізованому сховищі Walrus?",
+      tooltip: "Перевірка розуміння шифрування та приватності у Walrus",
+    },
+    {
+      id: "olena_bm_3",
+      icon: "⚡",
+      badge: "SYNAPSE FORK",
+      label: "Quests vs Workshops",
+      prompt: "Який формат навчання кращий для новачків: ончейн-квести чи покрокові живі воркшопи?",
+      tooltip: "Аналіз векторів залучення аудиторії",
+    },
+    {
+      id: "olena_bm_4",
+      icon: "✂️",
+      badge: "PRUNE TEST",
+      label: "План воркшопу",
+      prompt: "Запропонуй 3 структури 2-годинного воркшопу про Walrus Memory. Я відсічу занадто складні.",
+      tooltip: "Вибір та відсікання невідповідних сценаріїв навчання",
+    },
+  ],
+  user_guest: [
+    {
+      id: "guest_bm_1",
+      icon: "🧠",
+      badge: "DEEP DIVE",
+      label: "RedStuff Coding",
+      prompt: "Поясни простими словами: як кодування RedStuff у Walrus гарантує відновлення даних при втраті 1/3 нод?",
+      tooltip: "Оцінка технічної математичної моделі Walrus",
+    },
+    {
+      id: "guest_bm_2",
+      icon: "🛑",
+      badge: "RULE TEST",
+      label: "Встановити табу",
+      prompt: "Запам'ятай суворе правило: відтепер ніколи не рекомендуй централізовані хмари типу AWS S3 чи Google Cloud.",
+      tooltip: "Живий запис нового правила-обмеження в ончейн пам'ять",
+    },
+    {
+      id: "guest_bm_3",
+      icon: "⚡",
+      badge: "SYNAPSE FORK",
+      label: "IPFS vs Walrus",
+      prompt: "У чому фундаментальна різниця в архітектурі та доступності даних між IPFS/Filecoin та Walrus?",
+      tooltip: "Порівняльний архітектурний бенчмарк децентралізованих мереж",
+    },
+    {
+      id: "guest_bm_4",
+      icon: "✂️",
+      badge: "PRUNE TEST",
+      label: "Ідеї для DApp",
+      prompt: "Запропонуй 3 круті ідеї для DApp, які критично потребують пам'яті Walrus, щоб я відсік зайві.",
+      tooltip: "Генерація ідей з інтерактивним відсіканням синапсів",
+    },
+  ],
+};
 
 interface Persona {
   id: string;
@@ -142,6 +255,10 @@ export default function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeRules, setActiveRules] = useState<string[]>([]);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
+  const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>(
+    PERSONA_INITIAL_BENCHMARKS[PERSONAS[0].id] || []
+  );
+  const [benchmarksUpdated, setBenchmarksUpdated] = useState<boolean>(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Initialize guest ID
@@ -217,6 +334,8 @@ export default function HomePage() {
     
     // Close sidebar on mobile after selection
     setSidebarOpen(false);
+    // Reset/update benchmarks for the selected persona
+    setBenchmarks(PERSONA_INITIAL_BENCHMARKS[selectedPersona.id] || PERSONA_INITIAL_BENCHMARKS.user_anna_frontend);
   }, [selectedPersona]);
 
   useEffect(() => {
@@ -253,6 +372,12 @@ export default function HomePage() {
       if (data.activeRules) {
         setActiveRules(data.activeRules);
         localStorage.setItem("walbot_rules_" + selectedPersona.id, JSON.stringify(data.activeRules));
+      }
+
+      if (data.benchmarks && Array.isArray(data.benchmarks) && data.benchmarks.length > 0) {
+        setBenchmarks(data.benchmarks);
+        setBenchmarksUpdated(true);
+        setTimeout(() => setBenchmarksUpdated(false), 3000);
       }
 
       const botMsgId = "bot-" + Date.now();
@@ -677,17 +802,42 @@ export default function HomePage() {
         <div className="p-4 sm:p-5 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent z-20 shrink-0 space-y-2.5">
           <div className="max-w-4xl mx-auto w-full flex flex-col gap-2">
             
-            {/* 1-Click Judge Benchmarks */}
-            <div className="bg-[#080d14]/90 border border-[#141f2e] p-2.5 rounded-xl">
+            {/* 1-Click Judge Benchmarks (Dynamic Adaptive) */}
+            <div className={`bg-[#080d14]/90 border p-2.5 rounded-xl transition-all duration-500 ${
+              benchmarksUpdated ? "border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-[#141f2e]"
+            }`}>
               <div className="flex items-center justify-between mb-1.5 px-1">
-                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  1-Click Judge Benchmarks:
-                </span>
-                <span className="text-[9px] font-mono text-gray-500">Швидкі сценарії перевірки Walrus Memory для суддів</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    Adaptive Judge Benchmarks:
+                  </span>
+                  {benchmarksUpdated && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 animate-pulse">
+                      ⚡ RE-EVOLVED
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono text-gray-500 hidden sm:inline">
+                    Динамічно еволюціонують під контекст
+                  </span>
+                  <button
+                    onClick={() => {
+                      playSynapseBeep();
+                      handleSend("Запропонуй 4 нові, свіжі бенчмарк-сценарії для перевірки нашої поточної розмови та активних правил.");
+                    }}
+                    disabled={loading}
+                    title="Згенерувати нові сценарії бенчмарків"
+                    className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#0f1722] hover:bg-cyan-950 border border-[#1b2b3d] hover:border-cyan-500/50 text-cyan-400 flex items-center gap-1 transition-all disabled:opacity-40"
+                  >
+                    <span>🔄</span>
+                    <span>Re-roll</span>
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {JUDGE_BENCHMARKS.map((bm) => (
+                {benchmarks.map((bm) => (
                   <button
                     key={bm.id}
                     disabled={loading}
@@ -699,7 +849,7 @@ export default function HomePage() {
                       <span className="text-xs">{bm.icon}</span>
                     </div>
                     <div className="text-[11px] font-bold text-gray-200 group-hover:text-white truncate">{bm.label}</div>
-                    <div className="text-[9px] text-gray-500 truncate mt-0.5">{bm.tooltip}</div>
+                    <div className="text-[9px] text-gray-500 truncate mt-0.5" title={bm.tooltip || bm.prompt}>{bm.tooltip}</div>
                   </button>
                 ))}
               </div>
